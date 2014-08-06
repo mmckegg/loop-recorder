@@ -26,7 +26,7 @@ Returns an instance of LoopRecorder - a WritableStream.
 
 Accepts an input of events in the [ditty v2 output format](https://github.com/mmckegg/ditty). Usually you would pipe in events from something like [soundbank-trigger](https://github.com/mmckegg/soundbank-trigger).
 
-Stores each `id` channel seperately.
+Stores each `id` channel separately.
 
 ```js
 recorder.write({id: 'C', event: 'start', position: 0})
