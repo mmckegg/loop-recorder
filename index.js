@@ -3,14 +3,14 @@ var inherits = require('util').inherits
 
 module.exports = LoopRecorder
 
-function LoopRecorder(bufferLength){
+function LoopRecorder(retainThreshold){
   if (!(this instanceof LoopRecorder)){
     return new LoopRecorder(retainThreshold)
   }
 
   this._state = {
     events: {},
-    retainThreshold: retainThreshold,
+    retainThreshold: retainThreshold || 64,
     oldestPositions: {},
     trimDelay: 8
   }
@@ -23,19 +23,21 @@ inherits(LoopRecorder, Writable)
 LoopRecorder.prototype._write = function(data, enc, cb){
   var state = this._state
   var events = state.events[data.id] = state.events[data.id] || []
-  var oldestPosition = oldestPositions[data.id]
+  var oldestPosition = state.oldestPositions[data.id]
 
   events.push(data)
 
   if (data.position < oldestPosition || oldestPosition == null){
-    oldestPositions[data.id] = oldestPosition = data.position
+    state.oldestPositions[data.id] = oldestPosition = data.position
   }
 
   // clean up old events periodically
   if (data.position - state.retainThreshold + state.trimDelay > oldestPosition){
     events = state.events[data.id] = trimEvents(events, data.position - state.retainThreshold)
-    oldestPositions[data.id] = events[0] && events[0].position
+    state.oldestPositions[data.id] = events[0] && events[0].position
   }
+
+  cb()
 }
 
 LoopRecorder.prototype.getLoop = function(id, from, length, preroll){
@@ -47,7 +49,7 @@ LoopRecorder.prototype.getLoop = function(id, from, length, preroll){
   if (events){
 
     var sortedEvents = events.filter(function(event){
-      return event.position >= position-preroll && event.position < position+length
+      return event.position >= from-preroll && event.position < from+length
     }).sort(function(a,b){
       return a.position-b.position
     })
@@ -61,13 +63,13 @@ LoopRecorder.prototype.getLoop = function(id, from, length, preroll){
         duplicateCheck[dupKey] = data
         if (data.event === 'start'){
           if (currentEvent){
-            currentEvent[1] = data.position - currentEvent[0]
+            currentEvent[1] = roundLength(data.position - currentEvent[0])
           }
-          currentEvent = [data.position, null].concat(data.args)
+          currentEvent = [data.position, null].concat(data.args || [])
           result.push(currentEvent)
         } else if (data.event === 'stop'){
           if (currentEvent){
-            currentEvent[1] = data.position - currentEvent[0]
+            currentEvent[1] = roundLength(data.position - currentEvent[0])
             currentEvent = null
           }
         }
@@ -78,9 +80,9 @@ LoopRecorder.prototype.getLoop = function(id, from, length, preroll){
     if (currentEvent){
       var loopback = sortedEvents[0]
       if (loopback.event === 'stop'){
-        currentEvent[1] = loopback + length - data.position
+        currentEvent[1] = roundLength(loopback.position + length - currentEvent[0])
       } else {
-        currentEvent[1] = from + length - data.position
+        currentEvent[1] = roundLength(from + length - currentEvent[0])
       }
     }
 
@@ -107,4 +109,9 @@ function trimEvents(events, position){
     }
   }
   return events.slice(0, i)
+}
+
+function roundLength(length){
+  // hack around floating point arithmetic inaccuracy
+  return Math.round(length * 100000000) / 100000000
 }
