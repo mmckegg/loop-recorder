@@ -3,7 +3,7 @@ loop-recorder
 
 Buffers all streamed in trigger events and creates range loops on demand.
 
-## Install via [npm](https://npmjs.org/packages/loop-recorder)
+## Install via [npm](https://npmjs.org/package/loop-recorder)
 
 ```bash
 $ npm install loop-recorder
