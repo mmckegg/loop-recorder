@@ -1,4 +1,4 @@
-var Writable = require('stream').Writable
+var Stream = require('stream')//.Writable
 var inherits = require('util').inherits
 
 module.exports = LoopRecorder
@@ -15,12 +15,14 @@ function LoopRecorder(retainThreshold){
     trimDelay: 8
   }
 
-  Writable.call(this, {objectMode: true})
+  Stream.call(this)
+  this.writable = true
+  this.readable = false
 }
 
-inherits(LoopRecorder, Writable)
+inherits(LoopRecorder, Stream)
 
-LoopRecorder.prototype._write = function(data, enc, cb){
+LoopRecorder.prototype.write = function(data){
   var state = this._state
   var events = state.events[data.id] = state.events[data.id] || []
   var oldestPosition = state.oldestPositions[data.id]
@@ -37,7 +39,8 @@ LoopRecorder.prototype._write = function(data, enc, cb){
     state.oldestPositions[data.id] = events[0] && events[0].position
   }
 
-  cb()
+  return true
+  //cb()
 }
 
 LoopRecorder.prototype.getLoop = function(id, from, length, preroll){
