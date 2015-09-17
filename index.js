@@ -43,6 +43,33 @@ LoopRecorder.prototype.write = function(data){
   //cb()
 }
 
+LoopRecorder.prototype.getHanging = function (id, from, length) {
+  var maxStart = 0
+  var maxStop = 0
+  var events = this._state.events[id]
+
+  if (!events) {
+    return false
+  }
+
+  for (var i = 0; i < events.length; i++) {
+    var data = events[i]
+    if (data.position >= from && data.position < from + length) {
+      return false
+    }
+
+    if (data.position < from) {
+      if (data.event === 'start' && data.position > maxStart) {
+        maxStart = data.position
+      } else if (data.event === 'stop' && data.position > maxStop) {
+        maxStop = data.position
+      }
+    }
+  }
+
+  return maxStart > maxStop
+}
+
 LoopRecorder.prototype.getLoop = function(id, from, length, preroll){
   preroll = preroll || 0
 
